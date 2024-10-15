@@ -32,6 +32,9 @@ export const getSaveLocationPref = (): string => {
     return pref;
 };
 
+export const getRelativeTemplateSaveLocation = (): string =>
+    getPreference('general.relativeTemplateSaveLocation');
+
 export const getHideStderrorWhenCompiledOK = (): boolean =>
     getPreference('general.hideStderrorWhenCompiledOK');
 

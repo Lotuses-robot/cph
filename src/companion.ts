@@ -4,7 +4,7 @@ import { Problem, CphSubmitResponse, CphEmptyResponse } from './types';
 import { saveProblem } from './parser';
 import * as vscode from 'vscode';
 import path from 'path';
-import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { isCodeforcesUrl, randomId } from './utils';
 import {
     getDefaultLangPref,
@@ -12,6 +12,7 @@ import {
     useShortCodeForcesName,
     getMenuChoices,
     getDefaultLanguageTemplateFileLocation,
+    getRelativeTemplateSaveLocation,
 } from './preferences';
 import { getProblemName } from './submit';
 import { spawn } from 'child_process';
@@ -148,8 +149,10 @@ export const setupCompanionServer = () => {
 };
 
 export const getProblemFileName = (problem: Problem, ext: string) => {
+    if (ext !== '') ext = `.${ext}`;
+    problem.url = problem.url.split('?')[0];
     if (isCodeforcesUrl(new URL(problem.url)) && useShortCodeForcesName()) {
-        return `${getProblemName(problem.url)}.${ext}`;
+        return `${getProblemName(problem.url)}${ext}`;
     } else {
         console.log(
             isCodeforcesUrl(new URL(problem.url)),
@@ -158,9 +161,9 @@ export const getProblemFileName = (problem: Problem, ext: string) => {
 
         const words = words_in_text(problem.name);
         if (words === null) {
-            return `${problem.name.replace(/\W+/g, '_')}.${ext}`;
+            return `${problem.name.replace(/\W+/g, '_')}${ext}`;
         } else {
-            return `${words.join('_')}.${ext}`;
+            return `${words.join('_')}${ext}`;
         }
     }
 };
@@ -211,8 +214,12 @@ const handleNewProblem = async (problem: Problem) => {
         const splitUrl = problem.url.split('/');
         problem.name = splitUrl[splitUrl.length - 1];
     }
-    const problemFileName = getProblemFileName(problem, extn);
-    const srcPath = path.join(folder, problemFileName);
+    const saveLocation = getRelativeTemplateSaveLocation(),
+        problemFileName = getProblemFileName(problem, extn),
+        dirName = getProblemFileName(problem, '');
+
+    const dirPath = path.join(folder + saveLocation, dirName),
+        srcPath = path.join(dirPath, problemFileName);
 
     // Add fields absent in competitive companion.
     problem.srcPath = srcPath;
@@ -221,6 +228,7 @@ const handleNewProblem = async (problem: Problem) => {
         id: randomId(),
     }));
     if (!existsSync(srcPath)) {
+        mkdirSync(dirPath);
         writeFileSync(srcPath, '');
     }
     saveProblem(srcPath, problem);
